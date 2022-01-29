@@ -1,23 +1,42 @@
 version: "3.3"
 
 services:
-  hygroscopicitytestbed:
-    image: "mdpetters/hygroscopicitytestbed:new"
+  traefik:
+    image: traefik:v2.3
     deploy:
-      restart_policy:
-        condition: any
-      mode: replicated
-      replicas: 2
+      mode: global
+    networks:
+      - traefik-net
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.app.address=:80"
     ports:
-      - "1234:1234"
+      - 80:1234
+      - 8080:8080
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
 
-  virtualdma:
-    image: "mdpetters/virtualdma:latest"
+  app:
+    image: "mdpetters/virtualdma"
     deploy:
       restart_policy:
         condition: any
       mode: replicated
-      replicas: 2
-    ports:
-      - "1235:1234"
+      replicas: 3
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.entrypoints=app"
+      - "traefik.http.routers.app.rule=Host(`10.192.130.244`)"
+      - "traefik.http.services.app-service.loadBalancer.sticky.cookie=true"
+      - "traefik.http.services.app-service.loadBalancer.sticky.cookie.name=app_cookie_name"
+      - "traefik.http.services.app-service.loadbalancer.server.port=80"
+
+networks:
+  traefik-net:
+    external: true
 
