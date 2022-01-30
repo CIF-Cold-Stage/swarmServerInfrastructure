@@ -1,0 +1,47 @@
+## Deploy notes
+
+# Packages needed may dpend on the base image. 
+
+# Install Docker on Ubuntu
+apt update
+apt upgrade
+apt install docker.io 
+
+# Install Docker on Centos-8 minimal
+dnf install htop
+yum install -y yum-utils
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install docker-ce docker-ce-cli containerd.io
+https://docs.docker.com/engine/install/linux-postinstall/
+sudo systemctl enable docker.service
+sudo systemctl enable containerd.service
+useradd -aG docker $USER
+
+# Download packages
+git clone https://github.com/CIF-Cold-Stage/swarmServerInfrastructure.git 
+git clone https://github.com/mdpetters/webapps
+
+wget https://julialang-s3.julialang.org/bin/linux/x64/1.7/julia-1.7.1-linux-x86_64.tar.gz
+
+tar xvfz julia-1.7.1-linux-x86_64.tar.gz
+ln -s ~/julia-1.7.1/bin/julia /usr/bin/julia
+
+# Build virtualDMA app
+cd ~/webapps/virtualDMA
+docker build . -t mdpetters/virtualdma:latest
+
+# Start docker swarm. Need to specify the --advertise-addr based on IP
+docker swarm init --advertise-addr=
+
+# Deploy server - it should be running in screen or tmux
+tmux
+cd ~/swarmServerInfrastructure/monitor 
+julia --project
+Pkg> instantiate
+Exit Julia
+
+export GENIE_ENV=prod
+bin/server
+
+# NGINX configuration
+TBD
