@@ -28,7 +28,7 @@ ln -s ~/julia-1.7.1/bin/julia /usr/bin/julia
 
 # Build virtualDMA app
 cd ~/webapps/virtualDMA
-docker build . -t mdpetters/virtualdma:latest
+docker build . -t mdpetters/virtualdma:server
 
 # Start docker swarm. Need to specify the --advertise-addr based on IP
 docker swarm init --advertise-addr=
