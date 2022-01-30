@@ -45,6 +45,8 @@ function stats()
 			return val[1] * 1024 
 		elseif (val[2] == "MB") 
 			return val[1] * 1024 * 1024 
+		elseif (val[2] == "GiB") 
+			return val[1] * 1024 * 1024 * 1024
 		else
 			return 0
 		end
@@ -67,20 +69,26 @@ end
 
 function updateActivity(containerActivity, ID, netIO)
 	try
-		netIO - containerActivity[ID]
+		netIO - containerActivity.value[ID]
 	catch
 		netIO
 	end
 end
 
-function containerManager(containerActivity)
+function regenerate_service(containerStr::String, port::Int, delay::Int)
+	sleep(delay)
+	push!(resolve_ports[containerStr], port)
+end
+
+function containerManager()
 	containerID, containerStr, netIO = stats()
 	age = map(containerAgeByID, containerID)
 	activity = map((x,y) -> updateActivity(containerActivity,x,y), containerID, netIO)
-	map((x,y) -> containerActivity[x] = y, containerID, netIO)
+	map((x,y) -> containerActivity.value[x] = y, containerID, netIO)
 
 	taintedFlag = map(containerID, containerStr) do x,y
-		hash = open(f->read(f, String), y)
+		z = String.(split(y, '-'))
+		hash = open(f->read(f, String), z[1])
 		hashlog(x) != hash
 	end
 
@@ -94,26 +102,24 @@ function containerManager(containerActivity)
 		taintedFlag = taintedFlag
 	)
 
-	function destroyContainer(containerID, age, taintedFlag, activity)
+	function destroyContainer(containerID, containerStr, age, taintedFlag, activity)
 		if (age > Minute(30)) && taintedFlag && (activity < 1.0)
+			z = String.(split(containerStr, '-'))
+			port = port_base[z[1]] + parse(Int, z[2])
 			println("Destroy $(containerID)")
-			containerDestroyByID(containerID)
+			println("Restore Service port: $(port)")
+			containerDestroyByID(containerID)          
+			@async regenerate_service(z[1], port, 300) # restore to pool w/300s delay 
 		end
+
 		return nothing
 	end
 
-	map(destroyContainer, containerID, age, taintedFlag, activity)
-	return containerActivity, log
+	map(destroyContainer, containerID, containerStr, age, taintedFlag, activity)
+	log |> CSV.write("logfile.csv", append = true)
+	show(log)
+	println()
+
+	return log
 end
 
-function main()
-	containerActivity = Dict{String, Number}()		
-	
-	while true
-		containerActivity, log = containerManager(containerActivity)
-		show(log)
-		println()
-		log |> CSV.write("logfile.csv", append = true)
-		sleep(30*60)
-	end
-end
