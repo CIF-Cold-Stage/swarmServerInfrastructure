@@ -12,7 +12,7 @@ function service_create(str, n)
 	read(`docker network create -d overlay $(s[1]) --attachable`)
 	function instance(i)
 		op = p + i
-		read(`docker service create -d --name=$(str)-$(i) --publish $(op):1234 --network=$(s[1]) mdpetters/virtualdma`)
+		read(`docker service create -d --name=$(str)-$(i) --publish $(op):1234 --network=$(s[1]) mdpetters/virtualdma:server`)
 	end
 	map(instance, 0:n-1)
 end
@@ -28,6 +28,8 @@ port_base = Dict{String, Int}([lab => 1000])
 map(i -> push!(resolve_ports[lab], i), 
 	port_base[lab]:port_base[lab]+n_clients-1)
 service_create(lab, n_clients)
+
+sleep(60*15)
 
 # Service 
 route("virtualTDMA") do
