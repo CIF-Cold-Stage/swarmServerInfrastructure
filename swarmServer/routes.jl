@@ -2,6 +2,10 @@ using Genie.Router
 using Reactive
 using DataStructures
 
+route("/") do
+	
+end
+
 route("/test") do
 	"Hello World!"
 end
@@ -33,7 +37,7 @@ resolve_ports = Dict(lab1 => vdma_ports, lab2 => testbed_ports)
 port_base = Dict{String, Int}(lab1 => 1000, lab2 => 1050)
 
 map(i -> push!(resolve_ports[lab1], i), port_base[lab1]:port_base[lab1]+n_clients1-1)
-map(i -> push!(resolve_ports[lab2], i), port_base[lab1]:port_base[lab2]+n_clients2-1)
+map(i -> push!(resolve_ports[lab2], i), port_base[lab2]:port_base[lab2]+n_clients2-1)
 
 run(`docker network create -d overlay swarm --attachable`)
 service_create(lab1, n_clients1, image1)
@@ -46,8 +50,11 @@ route("virtualTDMA") do
 	if isempty(vdma_ports)
 		"Sorry, all containers are checked out. This resource is currently unavailable. Please check back again later. If this issue persists, please contact mdpetter@ncsu.edu"
 	else
-		p = pop!(resolve_ports[lab1])
-		Genie.Renderer.redirect("http://$(IP):$(p)/open?path=webapp.jl")
+		p1 = pop!(resolve_ports[lab1])
+		println("Checking out port $(p1)")
+		println("Available ports")
+		println(resolve_ports[lab1])
+		Genie.Renderer.redirect("http://$(IP):$(p1)/open?path=webapp.jl")
 	end
 end
 
@@ -55,8 +62,11 @@ route("hygroscopicityTestbed") do
 	if isempty(testbed_ports)
 		"Sorry, all containers are checked out. This resource is currently unavailable. Please check back again later. If this issue persists, please contact mdpetter@ncsu.edu"
 	else
-		p = pop!(resolve_ports[lab2])
-		Genie.Renderer.redirect("http://$(IP):$(p)/open?path=webapp.jl")
+		p2 = pop!(resolve_ports[lab2])
+		println("Checking out port $(p2)")
+		println("Available ports")
+		println(resolve_ports[lab2])
+		Genie.Renderer.redirect("http://$(IP):$(p2)/open?path=webapp.jl")
 	end
 end
 

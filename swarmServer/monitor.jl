@@ -2,9 +2,15 @@ using Dates
 using SHA
 using DataFrames
 using CSV
+using JSON
 
 hashlog(ID) = (read(`docker logs $(ID)`) |> sha256 |> bytes2hex)
 containerDestroyByID(ID) = read(`docker rm -f $(ID)`)
+
+function servicePort(str)
+	a = read(`docker service inspect $(str)`, String) |> JSON.parse
+	return a[1]["Spec"]["EndpointSpec"]["Ports"][1]["PublishedPort"]
+end
 
 function stats()
 	a = read(`docker stats --no-stream`, String)
@@ -77,7 +83,14 @@ end
 
 function regenerate_service(containerStr::String, port::Int, delay::Int)
 	sleep(delay)
-	push!(resolve_ports[containerStr], port)
+	z = String.(split(containerStr, '-'))
+    thisPort = servicePort(containerStr)
+	if thisPort ∉ resolve_ports[z[1]]
+		println("Port was checked out, regenerate")
+		push!(resolve_ports[containerStr], port)
+	else
+		println("Container regenerated, but container was not checked out")
+	end
 end
 
 function containerManager()
@@ -89,7 +102,9 @@ function containerManager()
 	taintedFlag = map(containerID, containerStr) do x,y
 		z = String.(split(y, '-'))
 		hash = open(f->read(f, String), z[1])
-		hashlog(x) != hash
+        thisPort = servicePort(y)
+		println(y, "  ", thisPort, "  ", resolve_ports[z[1]])
+		(hashlog(x) != hash) || (thisPort ∉ resolve_ports[z[1]])
 	end
 
 	log = DataFrame(
@@ -103,13 +118,13 @@ function containerManager()
 	)
 
 	function destroyContainer(containerID, containerStr, age, taintedFlag, activity)
-		if (age > Minute(30)) && taintedFlag && (activity < 1.0)
+		if taintedFlag && (activity < 1.0)
 			z = String.(split(containerStr, '-'))
 			port = port_base[z[1]] + parse(Int, z[2])
 			println("Destroy $(containerID)")
 			println("Restore Service port: $(port)")
 			containerDestroyByID(containerID)          
-			@async regenerate_service(z[1], port, 300) # restore to pool w/300s delay 
+			@async regenerate_service(containerStr, port, 300) # restore to pool w/300s delay 
 		end
 
 		return nothing
