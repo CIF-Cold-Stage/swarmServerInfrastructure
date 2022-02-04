@@ -87,7 +87,7 @@ function regenerate_service(containerStr::String, port::Int, delay::Int)
     thisPort = servicePort(containerStr)
 	if thisPort ∉ resolve_ports[z[1]]
 		println("Port was checked out, regenerate")
-		push!(resolve_ports[containerStr], port)
+		push!(resolve_ports[z[1]], port)
 	else
 		println("Container regenerated, but container was not checked out")
 	end
