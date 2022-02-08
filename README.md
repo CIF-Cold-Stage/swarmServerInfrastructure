@@ -17,10 +17,7 @@ This repository provides a solution to the above problem. Docker containers are 
 In addition to the advantages to the user, this infrastructure is in many ways less complex than the JuyterHub framework. It can readily be deployed on premises using a wide range of hardware, and is as easily scalable to large deployments. A regular workstation with 24 cores/64 GB of memory would be sufficient to serve 30+ students. The swarm can either be local or using cloud servers. Hosting multiple different applications residing in different containers with different architecture is trivial. Administration of this infrastructure is also straightforward.    
 
 ## Content
-The ```swarm/docker-compose.yml``` contains the configuration of the swarm, including the number of provisioned replicas. Standard Docker commands ```docker swarm init …``` and ```docker stack deploy …``` are used to start the services. 
-
-The ```monitor/monitor.jl``` script logs the state of the swarm and culls used and abandoned containers. 
-
+The ```swarmServer/``` contains a custom web server written using the [Genie framework](https://genieframework.com/). NGINX must be pointed to the public app directory. You can edit the ```routes.jl``` to setup multiple entry points to apps. This script also defines the number of container instances and hands out the container due to a web request. Each app is a docker container that runs as a service with a single replica on a docker swarm. The swarm server must be initialized first via ```docker swarm init …```. Container handling is defined in the ```monitor.jl``` script. The script checks for inactivity and replaces used containers after a predefined timeout. The ```deploy_notes.txt``` gives a rough guide for provisioning ther server architecture.
 
 # Acknowledgements 
 Development of this infrastructure was supported by NSF grant AGS-2112978.
