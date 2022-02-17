@@ -101,10 +101,11 @@ function containerManager()
 
 	taintedFlag = map(containerID, containerStr) do x,y
 		z = String.(split(y, '-'))
-		hash = open(f->read(f, String), z[1])
+		# hash = open(f->read(f, String), z[1])
         thisPort = servicePort(y)
 		println(y, "  ", thisPort, "  ", resolve_ports[z[1]])
-		(hashlog(x) != hash) || (thisPort ∉ resolve_ports[z[1]])
+		# (hashlog(x) != hash) || (thisPort ∉ resolve_ports[z[1]])
+		thisPort ∉ resolve_ports[z[1]]
 	end
 
 	log = DataFrame(
