@@ -54,8 +54,8 @@ map(i -> push!(resolve_ports[lab2], i), port_base[lab2]:port_base[lab2]+n_client
 map(i -> push!(resolve_ports[lab3], i), port_base[lab3]:port_base[lab3]+n_clients3-1)
 
 run(`docker network create -d overlay swarm --attachable`)
-#service_create(lab1, n_clients1, image1, 1234)
-#service_create(lab2, n_clients2, image2, 1234)
+service_create(lab1, n_clients1, image1, 1234)
+service_create(lab2, n_clients2, image2, 1234)
 service_create(lab3, n_clients3, image3, 8888)
 
 sleep(60 * 15)
@@ -89,11 +89,11 @@ route("apn") do
     if isempty(apn_ports)
         "Sorry, all containers are checked out. This resource is currently unavailable. Please check back again later. If this issue persists, please contact mdpetter@ncsu.edu"
     else
-        p2 = pop!(resolve_ports[lab2])
-        println("Checking out port $(p2)")
+        p3 = pop!(resolve_ports[lab3])
+        println("Checking out port $(p3)")
         println("Available ports")
-        println(resolve_ports[lab2])
-        Genie.Renderer.redirect("http://$(IP):$(p2)/tree?")
+        println(resolve_ports[lab3])
+        Genie.Renderer.redirect("http://$(IP):$(p3)/tree?")
     end
 end
 
