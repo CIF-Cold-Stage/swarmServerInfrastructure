@@ -32,7 +32,7 @@ IP = "127.0.0.1"
 
 # Service virtualDMA: "swarm_vdma"
 lab1 = "swarm_vdma"
-n_clients1 = 2
+n_clients1 = 1
 vdma_ports = Stack{Int}()
 image1 = "mdpetters/virtualdma:server"
 
@@ -46,17 +46,25 @@ apn_ports = Stack{Int}()
 n_clients3 = 2
 image3 = "mdpetters/apn"
 
-resolve_ports = Dict(lab1 => vdma_ports, lab2 => testbed_ports, lab3 => apn_ports)
-port_base = Dict{String,Int}(lab1 => 1000, lab2 => 1050, lab3 => 2000)
+lab4 = "swarm_invert"
+invert_ports = Stack{Int}()
+n_clients4 = 1
+image4 = "mdpetters/inverttdma:server"
+
+
+resolve_ports = Dict(lab1 => vdma_ports, lab2 => testbed_ports, lab3 => apn_ports, lab4 => invert_ports)
+port_base = Dict{String,Int}(lab1 => 1000, lab2 => 1020, lab3 => 1040, lab4 => 1260)
 
 map(i -> push!(resolve_ports[lab1], i), port_base[lab1]:port_base[lab1]+n_clients1-1)
 map(i -> push!(resolve_ports[lab2], i), port_base[lab2]:port_base[lab2]+n_clients2-1)
 map(i -> push!(resolve_ports[lab3], i), port_base[lab3]:port_base[lab3]+n_clients3-1)
+map(i -> push!(resolve_ports[lab4], i), port_base[lab4]:port_base[lab4]+n_clients4-1)
 
 run(`docker network create -d overlay swarm --attachable`)
 service_create(lab1, n_clients1, image1, 1234)
 service_create(lab2, n_clients2, image2, 1234)
 service_create(lab3, n_clients3, image3, 8888)
+service_create(lab4, n_clients4, image4, 1234)
 
 sleep(60 * 15)
 
@@ -97,6 +105,17 @@ route("apn") do
     end
 end
 
+route("invertHTDMA") do
+	if isempty(testbed_ports)
+		"Sorry, all containers are checked out. This resource is currently unavailable. Please check back again later. If this issue persists, please contact mdpetter@ncsu.edu"
+	else
+		p4 = pop!(resolve_ports[lab4])
+		println("Checking out port $(p4)")
+		println("Available ports")
+		println(resolve_ports[lab4])
+		Genie.Renderer.redirect("http://$(IP):$(p4)/open?path=webapp.jl")
+	end
+end
 
 include("monitor.jl")
 containerActivity = Signal(Dict{String,Number}())
