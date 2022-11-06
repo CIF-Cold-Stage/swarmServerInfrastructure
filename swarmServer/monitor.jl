@@ -119,7 +119,7 @@ function containerManager()
 	)
 
 	function destroyContainer(containerID, containerStr, age, taintedFlag, activity)
-		if taintedFlag && (activity < 1.0)
+		if (age > Minute(100)) && tainted
 			z = String.(split(containerStr, '-'))
 			port = port_base[z[1]] + parse(Int, z[2])
 			println("Destroy $(containerID)")

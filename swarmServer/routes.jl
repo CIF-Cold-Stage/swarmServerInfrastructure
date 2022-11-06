@@ -28,29 +28,28 @@ function service_create(str, n, image, internalport)
     map(instance, 0:n-1)
 end
 
-IP = "127.0.0.1"
+IP = "152.1.109.64"
 
 # Service virtualDMA: "swarm_vdma"
 lab1 = "swarm_vdma"
-n_clients1 = 1
+n_clients1 = 15
 vdma_ports = Stack{Int}()
 image1 = "mdpetters/virtualdma:server"
 
 lab2 = "swarm_htestbed"
 testbed_ports = Stack{Int}()
-n_clients2 = 2
+n_clients2 = 15
 image2 = "mdpetters/testbed:server"
 
 lab3 = "swarm_apn"
 apn_ports = Stack{Int}()
-n_clients3 = 2
+n_clients3 = 60
 image3 = "mdpetters/apn"
 
 lab4 = "swarm_invert"
 invert_ports = Stack{Int}()
-n_clients4 = 1
+n_clients4 = 15
 image4 = "mdpetters/inverttdma:server"
-
 
 resolve_ports = Dict(lab1 => vdma_ports, lab2 => testbed_ports, lab3 => apn_ports, lab4 => invert_ports)
 port_base = Dict{String,Int}(lab1 => 1000, lab2 => 1020, lab3 => 1040, lab4 => 1260)
@@ -119,5 +118,5 @@ end
 
 include("monitor.jl")
 containerActivity = Signal(Dict{String,Number}())
-timer = fps(1.0 / (15.0 * 60.0))
+timer = fps(1.0 / (45.0 * 60.0))
 mylog = map(_ -> containerManager(), timer)
