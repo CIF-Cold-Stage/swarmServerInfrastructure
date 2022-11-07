@@ -18,7 +18,8 @@ function stats()
 	b = split(a, '\n')
 	c = map(x -> split(x), b)
 	containerID = map(x -> String(x[1]), c[2:end-1])
-	containerStr = map(x -> String(x[2] |> x -> split(x, '.')[1]), c[2:end-1]) 
+	containerStr = map(x -> String(x[2] |> x -> split(x, '.')[1]), c[2:end-1])
+	portID = map(servicePort, containerStr) 
 	NetIO = map(x -> x[10], c[2:end-1])
 
 	function mparse(x)
@@ -60,7 +61,7 @@ function stats()
 
 	parsedNetIO = map(parseIO, NetIO)
 	cleanNetIO = map(netIOtoBytes, parsedNetIO)
-	return containerID, containerStr, cleanNetIO
+	return containerID, containerStr, cleanNetIO, portID
 end
 
 function containerAgeByID(ID)
@@ -94,17 +95,14 @@ function regenerate_service(containerStr::String, port::Int, delay::Int)
 end
 
 function containerManager()
-	containerID, containerStr, netIO = stats()
+	containerID, containerStr, netIO, ports = stats()
 	age = map(containerAgeByID, containerID)
 	activity = map((x,y) -> updateActivity(containerActivity,x,y), containerID, netIO)
-	map((x,y) -> containerActivity.value[x] = y, containerID, netIO)
-
+	
 	taintedFlag = map(containerID, containerStr) do x,y
 		z = String.(split(y, '-'))
-		# hash = open(f->read(f, String), z[1])
         thisPort = servicePort(y)
 		println(y, "  ", thisPort, "  ", resolve_ports[z[1]])
-		# (hashlog(x) != hash) || (thisPort ∉ resolve_ports[z[1]])
 		thisPort ∉ resolve_ports[z[1]]
 	end
 
@@ -118,20 +116,15 @@ function containerManager()
 		taintedFlag = taintedFlag
 	)
 
-	function destroyContainer(containerID, containerStr, age, taintedFlag, activity)
-		if (age > Minute(100)) && tainted
-			z = String.(split(containerStr, '-'))
-			port = port_base[z[1]] + parse(Int, z[2])
-			println("Destroy $(containerID)")
-			println("Restore Service port: $(port)")
-			containerDestroyByID(containerID)          
-			@async regenerate_service(containerStr, port, 300) # restore to pool w/300s delay 
-		end
-
-		return nothing
+	destroylist = filter([:checkout,:port] => (t,p) -> (now() - t > Minute(20)) & (p > 1000), stack)
+	global stack = filter([:checkout,:port] => (t,p) -> (now() - t < Minute(20)) | (p < 1000), stack)
+	map(eachrow(destroylist)) do x
+		println("Destroy $(x[:ID])")
+		println("Restore Service port: $(x[:port]))")
+		containerDestroyByID(x[:ID])
+		@async regenerate_service(x[:str], x[:port], 300)
 	end
 
-	map(destroyContainer, containerID, containerStr, age, taintedFlag, activity)
 	log |> CSV.write("logfile.csv", append = true)
 	show(log)
 	println()

@@ -1,6 +1,8 @@
 using Genie.Router
 using Reactive
 using DataStructures
+using CSV
+using DataFrames
 
 route("/") do
 
@@ -17,7 +19,7 @@ function service_create(str, n, image, internalport)
         op = p + i
         if image == "mdpetters/apn"
             read(
-                `docker service create -d --name=$(str)-$(i) --publish $(op):$(internalport) --network=$(s[1]) $(image) jupyter notebook --NotebookApp.token= --NotebookApp.password=`,
+                `docker service create -d --name=$(str)-$(i) --publish $(op):$(internalport) --network=$(s[1]) $(image)` # jupyter notebook --NotebookApp.token= --NotebookApp.password=`,
             )
         else
             read(
@@ -43,7 +45,7 @@ image2 = "mdpetters/testbed:server"
 
 lab3 = "swarm_apn"
 apn_ports = Stack{Int}()
-n_clients3 = 60
+n_clients3 = 50
 image3 = "mdpetters/apn"
 
 lab4 = "swarm_invert"
@@ -65,7 +67,30 @@ service_create(lab2, n_clients2, image2, 1234)
 service_create(lab3, n_clients3, image3, 8888)
 service_create(lab4, n_clients4, image4, 1234)
 
-sleep(60 * 15)
+sleep(60 * 10)
+
+stack = DataFrame(checkout = now(), str = "", ID = "", port = 0000)
+
+function communicate(cmd::Cmd, input)
+    inp = Pipe()
+    out = Pipe()
+    err = Pipe()
+
+    process = run(pipeline(cmd, stdin=inp, stdout=out, stderr=err), wait=false)
+    close(out.in)
+    close(err.in)
+
+    stdout = @async String(read(out))
+    stderr = @async String(read(err))
+    write(process, input)
+    close(inp)
+    wait(process)
+    return (
+        stdout = fetch(stdout),
+        stderr = fetch(stderr),
+        code = process.exitcode
+    )
+end
 
 # Service 
 route("virtualTDMA") do
@@ -76,7 +101,13 @@ route("virtualTDMA") do
         println("Checking out port $(p1)")
         println("Available ports")
         println(resolve_ports[lab1])
-        Genie.Renderer.redirect("http://$(IP):$(p1)/open?path=webapp.jl")
+        containerID, containerStr, netIO, ports = stats()
+        df = DataFrame(checkout = now(), str = containerStr, ID = containerID, port = ports)
+        IDf = filter(:port => x -> x == p1, df)
+        global stack = vcat(stack, IDf)
+        df = DataFrame(t = now(), app = "virtualTDMA")
+        df |> CSV.write("request.txt", append = true)
+        Genie.Renderer.redirect("http://notebooks.meas.ncsu.edu:$(p1)/open?path=webapp.jl")
     end
 end
 
@@ -88,7 +119,13 @@ route("hygroscopicityTestbed") do
         println("Checking out port $(p2)")
         println("Available ports")
         println(resolve_ports[lab2])
-        Genie.Renderer.redirect("http://$(IP):$(p2)/open?path=webapp.jl")
+        containerID, containerStr, netIO, ports = stats()
+        df = DataFrame(checkout = now(), str = containerStr, ID = containerID, port = ports)
+        IDf = filter(:port => x -> x == p2, df)
+        global stack = vcat(stack, IDf)
+        df = DataFrame(t = now(), app = "hygroscopityTestbed")
+        df |> CSV.write("request.txt", append = true)
+        Genie.Renderer.redirect("http://notebooks.meas.ncsu.edu:$(p2)/open?path=webapp.jl")
     end
 end
 
@@ -100,7 +137,16 @@ route("apn") do
         println("Checking out port $(p3)")
         println("Available ports")
         println(resolve_ports[lab3])
-        Genie.Renderer.redirect("http://$(IP):$(p3)/tree?")
+        containerID, containerStr, netIO, ports = stats()
+        df = DataFrame(checkout = now(), str = containerStr, ID = containerID, port = ports)
+        IDf = filter(:port => x -> x == p3, df)
+        global stack = vcat(stack, IDf)
+        ID = IDf[1,:ID]
+        logs = communicate(`docker logs $(ID)`, "") 
+        token = split(split(logs.stderr, "token=")[2], "\n")[1]
+        df = DataFrame(t = now(), app = "apn")
+        df |> CSV.write("request.txt", append = true)
+        Genie.Renderer.redirect("http://notebooks.meas.ncsu.edu:$(p3)/?token=$(token)")
     end
 end
 
@@ -112,11 +158,18 @@ route("invertHTDMA") do
 		println("Checking out port $(p4)")
 		println("Available ports")
 		println(resolve_ports[lab4])
-		Genie.Renderer.redirect("http://$(IP):$(p4)/open?path=webapp.jl")
+        containerID, containerStr, netIO, ports = stats()
+        df = DataFrame(checkout = now(), str = containerStr, ID = containerID, port = ports)
+        IDf = filter(:port => x -> x == p4, df)
+        global stack = vcat(stack, IDf)
+        df = DataFrame(t = now(), app = "invertTDMA")
+        df |> CSV.write("request.txt", append = true)
+		Genie.Renderer.redirect("http://notebooks.meas.ncsu.edu:$(p4)/open?path=webapp.jl")
 	end
 end
 
 include("monitor.jl")
 containerActivity = Signal(Dict{String,Number}())
-timer = fps(1.0 / (45.0 * 60.0))
+timer = fps(1.0 / (15.0 * 60.0))
 mylog = map(_ -> containerManager(), timer)
+""
