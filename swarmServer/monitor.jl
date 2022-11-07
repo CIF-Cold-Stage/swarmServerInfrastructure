@@ -116,8 +116,8 @@ function containerManager()
 		taintedFlag = taintedFlag
 	)
 
-	destroylist = filter([:checkout,:port] => (t,p) -> (now() - t > Minute(20)) & (p > 1000), stack)
-	global stack = filter([:checkout,:port] => (t,p) -> (now() - t < Minute(20)) | (p < 1000), stack)
+	destroylist = filter([:checkout,:port] => (t,p) -> (now() - t > Minute(75)) & (p > 1000), stack)
+	global stack = filter([:checkout,:port] => (t,p) -> (now() - t < Minute(75)) | (p < 1000), stack)
 	map(eachrow(destroylist)) do x
 		println("Destroy $(x[:ID])")
 		println("Restore Service port: $(x[:port]))")
