@@ -161,7 +161,7 @@ route("invertHTDMA") do
 	if isempty(testbed_ports)
 		"Sorry, all containers are checked out. This resource is currently unavailable. Please check back again later. If this issue persists, please contact mdpetter@ncsu.edu"
 	else
-		p4 = pop!(resolve_ports[lab4])
+		p5 = pop!(resolve_ports[lab5])
 		println("Checking out port $(p5)")
 		println("Available ports")
 		println(resolve_ports[lab5])
