@@ -84,3 +84,16 @@ https://docs.docker.com/engine/install/linux-postinstall/
 sudo systemctl enable docker.service
 sudo systemctl enable containerd.service
 useradd -aG docker $USER
+
+@reboot tmux new-session -d -s genie ./startup.sh
+
+  1 server {
+  2 
+  3   server_name   notebooks.meas.ncsu.edu;
+  4   root          /root/swarmServerInfrastructure/swarmServer/public;
+  5   index         index.html;
+  6 
+  7   location / {
+  8       proxy_pass http://localhost:8000/;
+  9   }
+ 10 }                                                                                                             
